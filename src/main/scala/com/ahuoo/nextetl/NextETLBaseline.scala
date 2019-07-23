@@ -124,7 +124,7 @@ object NextETLBaseline {
   }
 
   def extract(sourceTable: String): DataFrame ={
-    val url = customConfig.getString("jdbc_ChineseDL_url")
+    val url = customConfig.getString("jdbc_source_url")
     val df = spark.read.format("jdbc").options(Map("url" -> url,  "dbtable" -> sourceTable, "fetchsize"->"10000")).load()
     df
   }
