@@ -1,13 +1,5 @@
-In EMR, You can find println's in a few places:
-    Resource Manager -> Your Application -> Logs -> stdout
-    Your S3 log directory -> containers/application_.../container_.../stdout
-        (though this takes a few minutes to populate after the application)
-    SSH into the EMR, yarn logs -applicationId <Application ID> -log_files <log_file_type>
 
-Start EMR:
-    Master:1m3.xlarge
-    Core:m3.xlarge
-    aws emr create-cluster --applications Name=Hadoop Name=Spark Name=Livy --tags 'backup=none' 'role=DevOps' 'automation_registered=100' 'licensed_software=100' 'application_class=back end' 'Name=ANO-LXBVDEMR201' 'provisioned_by=DevOps' 'secondary_application=na' 'daily_state=100' 'daily_offset=0' 'department=development' 'application_version=emr-5.23.0' 'server_owner=MDC_Neo-nextgen' 'auto_reboot=100' 'os_platform=linux' 'business_service=mac-web services' 'env=dev' 'lob_monitoring=100' 'environment=dev' 'patch_level=excluded' 'application=nextgen_data_integration' 'domain=analytics.moodys.net' 'monitoring_strategy=unmonitored' 'lob=con_all_dev' --ec2-attributes '{"AdditionalSlaveSecurityGroups":["sg-057cb5c216e82a986"],"InstanceProfile":"LOB_EMR_EC2_2","ServiceAccessSecurityGroup":"sg-0ba499cb89baa9ff7","SubnetId":"subnet-0335fbbf03735a483","EmrManagedSlaveSecurityGroup":"sg-0f72b6c0f4cb860f1","EmrManagedMasterSecurityGroup":"sg-0b39ecc7d25a53362","AdditionalMasterSecurityGroups":["sg-057cb5c216e82a986"]}' --release-label emr-5.23.0 --log-uri 's3n://project-nextgen/log/' --steps '[{"Args":["spark-submit","--conf","spark.driver.extraJavaOptions=-Duser.timezone=UTC","--conf","spark.executor.extraJavaOptions=-Duser.timezone=UTC","--deploy-mode","cluster","--class","com.moodys.nextgen.VersionTest","s3://project-nextgen/lib/original-nextgen-1.0-SNAPSHOT.jar"],"Type":"CUSTOM_JAR","ActionOnFailure":"CONTINUE","Jar":"command-runner.jar","Properties":"","Name":"Spark application"}]' --instance-groups '[{"InstanceCount":2,"EbsConfiguration":{"EbsBlockDeviceConfigs":[{"VolumeSpecification":{"SizeInGB":32,"VolumeType":"gp2"},"VolumesPerInstance":1}],"EbsOptimized":false},"InstanceGroupType":"CORE","InstanceType":"m3.xlarge","Name":"Core - 2"},{"InstanceCount":1,"EbsConfiguration":{"EbsBlockDeviceConfigs":[{"VolumeSpecification":{"SizeInGB":32,"VolumeType":"gp2"},"VolumesPerInstance":1}],"EbsOptimized":false},"InstanceGroupType":"MASTER","InstanceType":"m3.xlarge","Name":"Master - 1"}]' --configurations '[{"Classification":"spark-defaults","Properties":{"spark.driver.memory":"5G"}}]' --ebs-root-volume-size 10 --service-role LOB_EMR_EC2 --name 'NextGen-DEV' --scale-down-behavior TERMINATE_AT_TASK_COMPLETION --region us-east-1
+
 
 Version of emr-5.23.0:
     Spark Version: 2.4.0
