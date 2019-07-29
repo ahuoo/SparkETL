@@ -1,8 +1,8 @@
 package com.ahuoo.nextetl
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDateTime}
-import java.util.{Calendar}
+import java.time.LocalDateTime
+import java.util.Calendar
 import java.util.concurrent.Executors
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
@@ -16,13 +16,18 @@ import scala.util.{Failure, Random, Success}
 
 case class Table(sourceTable: String, targetTable: String, transfermationSql: String)
 
-object NextETLBaseline {
+object NextETLBaseline { 
+
   val defaultConfig = ConfigFactory.parseResources("default.conf")
-  val customConfig = ConfigFactory.parseResources("tables.conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
-  val spark = SparkSession.builder.appName(customConfig.getString("app_name")).master("local[3]").getOrCreate()
+  val config = ConfigFactory.parseResources("tables.conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
+  val debug = config.getBoolean("debug")
+  val spark = if(debug) { SparkSession.builder.appName(config.getString("app_name")).master("local[3]").getOrCreate() }
+  else { SparkSession.builder.appName(config.getString("app_name")).getOrCreate() }
+
+
   val pool = Executors.newFixedThreadPool(5)
   implicit  val ec = ExecutionContext.fromExecutor(pool)
-  val filePath = customConfig.getString("benchmark_file_path") // "file:///c:/mdc-data/"
+  val filePath = config.getString("benchmark_file_path") // "file:///c:/mdc-data/"
   val tables = List("dbo.test")
 
 
@@ -32,7 +37,7 @@ object NextETLBaseline {
     lg("Spark Version: " + spark.version)
     lg("Scala Version: " + util.Properties.versionNumberString)
     lg("Java Version: " + System.getProperty("java.version"))
-    val tableListConfig = customConfig.getList("table_list")
+    val tableListConfig = config.getList("table_list")
     val tableList = tableListConfig.map(config => {
       val element = config.asInstanceOf[ConfigObject].toConfig
       val sourceTable = element.getString("source_table")
@@ -124,7 +129,7 @@ object NextETLBaseline {
   }
 
   def extract(sourceTable: String): DataFrame ={
-    val url = customConfig.getString("jdbc_source_url")
+    val url = config.getString("jdbc_source_url")
     val df = spark.read.format("jdbc").options(Map("url" -> url,  "dbtable" -> sourceTable, "fetchsize"->"10000")).load()
     df
   }
@@ -133,7 +138,7 @@ object NextETLBaseline {
     //write benchmark to s3
     df.write.mode(SaveMode.Overwrite).parquet(s"$filePath$targetTable/")
     //to db
-    val url = customConfig.getString("jdbc_target_url")
+    val url = config.getString("jdbc_target_url")
     lg(s"Start to write data to db. TableName=$targetTable, PartitionSize=" + df.rdd.partitions.length)
     df.write.format("jdbc")
       .options(Map("url" -> url, "dbtable" -> targetTable, "truncate" -> "true","batchsize"->"10000"))

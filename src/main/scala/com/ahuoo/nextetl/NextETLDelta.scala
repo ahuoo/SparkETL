@@ -19,11 +19,13 @@ case class Col(name: String)
 
 object  NextETLDelta {
   val defaultConfig = ConfigFactory.parseResources("default.conf")
-  val customConfig = ConfigFactory.parseResources("tables.conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
-  val spark = SparkSession.builder.appName(customConfig.getString("app_name")).master("local[3]").getOrCreate()
+  val config = ConfigFactory.parseResources("tables.conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
+  val debug = config.getBoolean("debug")
+  val spark = if(debug) { SparkSession.builder.appName(config.getString("app_name")).master("local[3]").getOrCreate() }
+  else { SparkSession.builder.appName(config.getString("app_name")).getOrCreate() }
   val pool = Executors.newFixedThreadPool(5)
   implicit  val ec = ExecutionContext.fromExecutor(pool)
-  val filePath = customConfig.getString("benchmark_file_path") // "file:///c:/mdc-data/"
+  val filePath = config.getString("benchmark_file_path") // "file:///c:/mdc-data/"
   val tables = List("dbo.test")
 
   def main(sysArgs: Array[String]): Unit = {
@@ -34,7 +36,7 @@ object  NextETLDelta {
     lg("Java Version: " + System.getProperty("java.version"))
     case class Table(sourceTable: String, targetTable: String, transfermationSql: String)
 
-    val tableListConfig = customConfig.getList("table_list")
+    val tableListConfig = config.getList("table_list")
     val tableList = tableListConfig.map(config => {
       val element = config.asInstanceOf[ConfigObject].toConfig
       val sourceTable = element.getString("source_table")
@@ -150,7 +152,7 @@ object  NextETLDelta {
     }catch{
       case e: Throwable => {
         lg("WARN : loading parquet file failed, load the full data from target database directly.")
-        val url = customConfig.getString("jdbc_target_url")
+        val url = config.getString("jdbc_target_url")
         df = spark.read.format("jdbc").options(Map("url" -> url,  "dbtable" -> targetTable)).load()
         df.write.mode(SaveMode.Overwrite).parquet(s"$filePath$targetTable/")
         lg(s"All data are written to parquet file, Path: $filePath$targetTable/")
@@ -162,7 +164,7 @@ object  NextETLDelta {
   }
 
   def extractFromSource(sourceTable: String, tempTable: String, tranformationSQL: String): DataFrame ={
-    val url = customConfig.getString("jdbc_source_url")
+    val url = config.getString("jdbc_source_url")
     val sourceDf = spark.read.format("jdbc").options(Map("url" -> url,  "dbtable" -> sourceTable, "fetchsize"->"10000")).load()
     if(tranformationSQL!=""){
       sourceDf.createOrReplaceTempView(tempTable)
@@ -188,7 +190,7 @@ object  NextETLDelta {
   }
 
   def save(df: DataFrame, targetTable: String): Unit ={
-    val url = customConfig.getString("jdbc_target_url")
+    val url = config.getString("jdbc_target_url")
     lg(s"Start to write data to db. TableName=$targetTable, PartitionSize=" + df.rdd.partitions.length)
     df.write.format("jdbc")
       .options(Map("url" -> url, "dbtable" -> targetTable,"truncate" -> "true","batchsize"->"10000"))
@@ -207,7 +209,7 @@ object  NextETLDelta {
   }
 
   def dbExecute(sqlList: List[String]): Unit ={
-    val url = customConfig.getString("jdbc_target_url")
+    val url = config.getString("jdbc_target_url")
     val options = new JDBCOptions((Map("url" -> url,"dbtable" -> "dbo.a", "batchsize"->"10000")))
     val conn = JdbcUtils.createConnectionFactory(options)()
     conn.setAutoCommit(false)
@@ -233,7 +235,7 @@ object  NextETLDelta {
   }
 
   def getPrimaryKey(targetTable: String): Seq[Col] = {
-    val url = customConfig.getString("jdbc_target_url")
+    val url = config.getString("jdbc_target_url")
     val options = new JDBCOptions((Map("url" -> url, "dbtable" -> "dbo.a", "batchsize" -> "10000","driver" -> "org.postgresql.Driver")))
     val sql = s"select kcu.table_schema,kcu.table_name, tco.constraint_name,kcu.ordinal_position as position,kcu.column_name as key_column " +
       s" from information_schema.table_constraints tco join information_schema.key_column_usage kcu on kcu.constraint_name = tco.constraint_name and kcu.constraint_schema = tco.constraint_schema  and kcu.constraint_name = tco.constraint_name"+
