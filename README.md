@@ -20,3 +20,4 @@ The package is built by Maven. when you get the source code, run below command t
 ```
     mvn package
 ```
+The output jar package includes all dependencies.
