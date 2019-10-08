@@ -14,6 +14,8 @@ object PrepareDataTest {
   def main(sysArgs: Array[String]): Unit = {
     val sql = getSql("/sql/PrepareData.sql")
     val df = readMysql(sql)
+    writeParquet(df,"file:///c:/mdc-data/men-parquet")
+/*
     writeMysql(df, "bs")
     df.show()
     df.printSchema()
@@ -25,7 +27,7 @@ object PrepareDataTest {
 
     writeCSV(df,"file:///c:/mdc-data/ball0901-csv")
     val dfCsv = readCSV("file:///c:/mdc-data/ball0901-csv/part-*.csv")
-    println("CSV row count: " + dfCsv.count())
+    println("CSV row count: " + dfCsv.count())*/
   }
 
 
