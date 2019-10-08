@@ -1,18 +1,18 @@
-package com.ahuoo.nextetl
+package com.ahuoo.nextetl.utils
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.log4j.Logger
 
 class  ConfigUtil(args: Array[String]) extends Serializable {
 
   @transient lazy val log = Logger.getLogger(this.getClass)
-  if(args.length != 2){
-    throw new Exception("You should input two parameters,like below: \n stg ###project.env=stg###project.retryNum=0")
+  if(args == null || args.length != 2){
+    throw new Exception("You should input two parameters,like below: \n dev ###project.env=dev###project.retryNum=0")
   }
   val env: String  = args(0)
   val overrideArgs: String  = args(1)
   val defaultConfig = ConfigFactory.parseResources("default.conf")
-  val config = ConfigFactory.parseResources(s"bvd."+env.toLowerCase()+".conf").withFallback(defaultConfig).resolve().getConfig("bvd")
+  val config = ConfigFactory.parseResources(s"default."+env.toLowerCase()+".conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
   var cache = scala.collection.mutable.Map[String,String]()
 
   /**
@@ -23,7 +23,7 @@ class  ConfigUtil(args: Array[String]) extends Serializable {
   def getConfigValue(key: String): Any ={
     val cacheValue = cache.get(key)
     if(!cacheValue.isEmpty){
-      //log.info(s"Load config from cache, $key="+cacheValue.getOrElse("None"))
+      log.debug(s"Load config from cache, $key="+cacheValue.getOrElse("None"))
       return cacheValue.getOrElse("None")
     }
     //frontend
@@ -62,6 +62,10 @@ class  ConfigUtil(args: Array[String]) extends Serializable {
   def getInt(key: String): Int ={
     val value = this.getConfigValue(key).toString
     value.toInt
+  }
+
+  def getConfig(): Config={
+    config
   }
 
 }

@@ -1,8 +1,6 @@
 package com.ahuoo.nextetl.ball
 
-import com.ahuoo.nextetl.NextETLBaseline.{config, debug}
 import org.apache.log4j.Logger
-import org.apache.spark.sql.execution.datasources.jdbc.JDBCOptions
 import org.apache.spark.sql.types.{DataTypes, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 

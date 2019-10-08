@@ -1,14 +1,14 @@
 package com.ahuoo.nextetl.crawl
 
+import com.ahuoo.nextetl.BaseApp
 import org.apache.log4j.Logger
 import scalaj.http.{Http, HttpResponse}
 
 import scala.collection.mutable.ListBuffer
 
-object CrawlerTest {
-  @transient lazy val log = Logger.getLogger(this.getClass)
+object CrawlerTest extends  BaseApp {
 
-  def main(sysArgs: Array[String]): Unit = {
+  def run(): Unit = {
     val code = "163407"
     val startDate = "2019-05-24"
     val valueList = getNetValue(code, startDate)

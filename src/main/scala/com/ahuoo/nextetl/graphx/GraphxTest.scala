@@ -5,6 +5,7 @@ import java.time.LocalDateTime
 import java.util.Calendar
 import java.util.concurrent.Executors
 
+import com.ahuoo.nextetl.BaseApp
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
@@ -18,19 +19,14 @@ import org.apache.spark.sql.SparkSession
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.graphx._
+
 import scala.util.hashing.MurmurHash3
 import scala.util.Properties
 import org.apache.spark.rdd.RDD
 
-object GraphxTest {
-  def main(args: Array[String]): Unit = {
-    @transient lazy val log = Logger.getLogger(this.getClass)
+object GraphxTest  extends  BaseApp {
 
-    val defaultConfig = ConfigFactory.parseResources("default.conf")
-    val config = ConfigFactory.parseResources("tables.conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
-    val debug = config.getBoolean("debug")
-    val spark = if(debug) { SparkSession.builder.appName(config.getString("app_name")).master("local[1]").getOrCreate() }
-    else { SparkSession.builder.appName(config.getString("app_name")).getOrCreate() }
+  def run(): Unit = {
     import spark.implicits._
     val sc = spark.sparkContext
 

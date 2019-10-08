@@ -1,19 +1,13 @@
 package com.ahuoo.nextetl.log
 
+import com.ahuoo.nextetl.BaseApp
 import com.typesafe.config.ConfigFactory
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
 
-object LogTest {
-  def main(args: Array[String]): Unit = {
-    @transient lazy val log = Logger.getLogger(this.getClass)
+object LogTest extends  BaseApp {
 
-    val defaultConfig = ConfigFactory.parseResources("default.conf")
-    val config = ConfigFactory.parseResources("tables.conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
-    val debug = config.getBoolean("debug")
-    val spark = if(debug) { SparkSession.builder.appName(config.getString("app_name")).master("local[3]").getOrCreate() }
-    else { SparkSession.builder.appName(config.getString("app_name")).getOrCreate() }
-
+  def run(): Unit = {
 
     println("Spark Version: " + spark.version)
     println("Scala Version: " + util.Properties.versionNumberString)
@@ -39,4 +33,5 @@ object LogTest {
     val lines = try source.mkString finally source.close()
     println("Log:" + lines)*/
   }
+
 }

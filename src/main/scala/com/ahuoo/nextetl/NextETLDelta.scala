@@ -5,7 +5,10 @@ import java.time.LocalDateTime
 import java.util.Calendar
 import java.util.concurrent.Executors
 
+import com.ahuoo.nextetl.NextETLBaseline.{config, filePath, log}
+import com.ahuoo.nextetl.utils.ConfigUtil
 import com.typesafe.config.{Config, ConfigFactory, ConfigObject}
+import org.apache.log4j.Logger
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 import scala.collection.JavaConversions._
@@ -17,18 +20,18 @@ import org.apache.spark.sql.execution.datasources.jdbc.{JDBCOptions, JdbcUtils}
 
 case class Col(name: String)
 
-object  NextETLDelta {
-  val defaultConfig = ConfigFactory.parseResources("default.conf")
-  val config = ConfigFactory.parseResources("tables.conf").withFallback(defaultConfig).resolve().getConfig("NextETL")
-  val debug = config.getBoolean("debug")
-  val spark = if(debug) { SparkSession.builder.appName(config.getString("app_name")).master("local[3]").getOrCreate() }
-  else { SparkSession.builder.appName(config.getString("app_name")).getOrCreate() }
+object  NextETLDelta  extends BaseApp{
   val pool = Executors.newFixedThreadPool(5)
   implicit  val ec = ExecutionContext.fromExecutor(pool)
-  val filePath = config.getString("benchmark_file_path") // "file:///c:/mdc-data/"
+  var filePath: String = _
   val tables = List("dbo.test")
 
-  def main(sysArgs: Array[String]): Unit = {
+  override  def init(args: Array[String]): Unit = {
+    super.init(args)
+    filePath = config.getString("benchmark_file_path")
+  }
+
+  def run(): Unit = {
     spark.sparkContext.setLogLevel("ERROR")
     lg("Hello NextETLDelta.")
     lg("Spark Version: " + spark.version)
@@ -36,7 +39,7 @@ object  NextETLDelta {
     lg("Java Version: " + System.getProperty("java.version"))
     case class Table(sourceTable: String, targetTable: String, transfermationSql: String)
 
-    val tableListConfig = config.getList("table_list")
+    val tableListConfig = config.getConfig().getList("table_list")
     val tableList = tableListConfig.map(config => {
       val element = config.asInstanceOf[ConfigObject].toConfig
       val sourceTable = element.getString("source_table")
@@ -85,6 +88,7 @@ object  NextETLDelta {
     pool.shutdown()
     spark.stop()
   }
+
 
   def etl(sourceTable: String, targetTable: String,  tempTable: String, tranformationSQL: String): Future[(String, String, Double)] = Future{
     val startTime = Calendar.getInstance.getTime
