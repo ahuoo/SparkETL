@@ -1,20 +1,25 @@
 package com.ahuoo.nextetl.ball
 
+import com.ahuoo.nextetl.BaseApp
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{DataTypes, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 import scala.io.Source
 
-object PrepareDataTest {
-  @transient lazy val log = Logger.getLogger(this.getClass)
-  val spark = SparkSession.builder.appName("PrepareDataTest").master("local[3]").getOrCreate()
+object PrepareDataTest extends BaseApp{
 
 
-  def main(sysArgs: Array[String]): Unit = {
+  def run(): Unit = {
+/*    val df = readParquet("file:///C:\\w\\workspace\\SparkETL\\src\\test\\resources\\20190719")
+    df.show()
+    println(df.count())
+    df.createOrReplaceTempView("t")*/
+
+
     val sql = getSql("/sql/PrepareData.sql")
     val df = readMysql(sql)
-    writeParquet(df,"file:///c:/mdc-data/men-parquet")
+    writeParquet(df,"file:///c:/mdc-data/men-parquet",5)
 /*
     writeMysql(df, "bs")
     df.show()
@@ -122,9 +127,9 @@ object PrepareDataTest {
   }
 
 
-  def writeParquet(df : DataFrame, filename: String): Unit ={
+  def writeParquet(df : DataFrame, filename: String, parNum: Int): Unit ={
     try{
-      df.repartition(1).write.mode(SaveMode.Overwrite).option("compression", "gzip").parquet(filename)
+      df.repartition(parNum).write.mode(SaveMode.Overwrite).option("compression", "gzip").parquet(filename)
     }catch{
       case e: Throwable => throw new Exception("Failed to generate parquet file", e)
     }

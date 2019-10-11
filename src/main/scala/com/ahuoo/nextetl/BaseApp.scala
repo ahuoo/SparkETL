@@ -8,6 +8,7 @@ trait BaseApp {
   @transient lazy val log = Logger.getLogger(this.getClass)
   var config: ConfigUtil = _
   val spark =  SparkSession.builder.appName("NextETL").master("local[3]").getOrCreate()
+  import spark.implicits._
 
   /**
     * override in your application object, if you need other variable to initialize, but please call super.init(args) first
