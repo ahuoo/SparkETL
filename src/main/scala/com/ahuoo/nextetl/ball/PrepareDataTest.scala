@@ -11,15 +11,28 @@ object PrepareDataTest extends BaseApp{
 
 
   def run(): Unit = {
-/*    val df = readParquet("file:///C:\\w\\workspace\\SparkETL\\src\\test\\resources\\20190719")
-    df.show()
+    val df = readParquet("file:///C:\\Users\\caih\\Downloads\\men-parquet")
     println(df.count())
-    df.createOrReplaceTempView("t")*/
-
-
+    df.createOrReplaceTempView("t")
     val sql = getSql("/sql/PrepareData.sql")
-    val df = readMysql(sql)
-    writeParquet(df,"file:///c:/mdc-data/men-parquet",5)
+    val outputDf = spark.sql(sql)
+    outputDf.createOrReplaceTempView("o")
+    println(outputDf.count())
+    outputDf.cache()
+/*    outputDf.schema.fieldNames.map(f => {
+      println(s"===========$f=============")
+      outputDf.describe(f).show()
+//      outputDf.stat.approxQuantile(f, Array(0.25,0.5,0.75),0.0).foreach(println)
+    })*/
+    writeCSV(outputDf,"file:///C:\\Users\\caih\\Downloads\\men-parquet-output",10)
+
+
+
+//    writeCSV(outputDf,"file:///C:\\Users\\caih\\Downloads\\men-parquet-output",3)
+
+   // db2Csv("file:///c:/mdc-data/men-parquet")
+
+
 /*
     writeMysql(df, "bs")
     df.show()
@@ -36,6 +49,11 @@ object PrepareDataTest extends BaseApp{
   }
 
 
+  def db2Csv(filename: String): Unit ={
+    val sql = getSql("/sql/PrepareData.sql")
+    val df = readMysql(sql)
+    writeCSV(df,filename,5)
+  }
 
   def getSchemaDefinition(df: DataFrame): String={
     var schema = "val schema = new StructType()\n"
@@ -109,13 +127,14 @@ object PrepareDataTest extends BaseApp{
     df
   }
 
-  def writeCSV(df : DataFrame, filename: String): Unit ={
+  def writeCSV(df : DataFrame, filename: String, parNum: Int): Unit ={
     try{
-      df.repartition(1)
+      df.repartition(parNum)
         .write
         .format("com.databricks.spark.csv")
         .mode("overwrite")
         .option("header", "true")
+        .option("compression", "gzip")
         .save(s"$filename")
     }catch{
       case e: Throwable => throw new Exception("Failed to generate csv file", e)

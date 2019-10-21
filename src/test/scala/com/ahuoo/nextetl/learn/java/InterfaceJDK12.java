@@ -1,6 +1,6 @@
 package com.ahuoo.nextetl.learn.java;
 
-interface MyInterface{
+interface InterfaceJDK12 {
 
     /* Already existing public and abstract method
      * We must need to implement this method in

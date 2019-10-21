@@ -1,12 +1,12 @@
 package com.ahuoo.nextetl.learn.java;
 
-public class InterfaceTest implements MyInterface{
+public class InterfaceJDK12Test implements InterfaceJDK12 {
     // implementing abstract method
     public void existingMethod(String str){
         System.out.println("String is: "+str);
     }
     public static void main(String[] args) {
-        InterfaceTest obj = new InterfaceTest();
+        InterfaceJDK12Test obj = new InterfaceJDK12Test();
 
         //calling the abstract method of interface
         obj.existingMethod("Java 8 is easy to learn");
@@ -15,6 +15,6 @@ public class InterfaceTest implements MyInterface{
         obj.newMethod();
 
         //calling the static method of interface
-        MyInterface.anotherNewMethod();
+        InterfaceJDK12.anotherNewMethod();
     }
 }
