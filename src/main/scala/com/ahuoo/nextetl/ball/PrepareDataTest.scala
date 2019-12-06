@@ -4,35 +4,54 @@ import com.ahuoo.nextetl.BaseApp
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{DataTypes, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
-
+import org.apache.spark.sql.functions._
 import scala.io.Source
 
 object PrepareDataTest extends BaseApp{
 
+  import spark.implicits._
+
+  val folder = "file:///C:/w/software/eclipse-jee/workspace/SparkETL/src/test/resources"
 
   def run(): Unit = {
-/*    val df = readParquet("file:///C:\\w\\workspace\\SparkETL\\src\\test\\resources\\20190719")
-    df.show()
-    println(df.count())
-    df.createOrReplaceTempView("t")*/
-
-
-    val sql = getSql("/sql/PrepareData.sql")
-    val df = readMysql(sql)
-    writeParquet(df,"file:///c:/mdc-data/men-parquet",5)
-/*
-    writeMysql(df, "bs")
-    df.show()
+    //prepare data for s3
+    val df = readMysql("ball.increase_temp").cache()
     df.printSchema()
-    getSchemaDefinition(df)
+    df.createOrReplaceTempView("t_raw_data")
+    writeParquet(df,s"$folder/other2/",5)
 
-    writeParquet(df,"file:///c:/mdc-data/ball0901-parquet")
-    val dfParquet = readParquet("file:///c:/mdc-data/ball0901-parquet")
-    println("Parquent row count: " + dfParquet.count())
 
-    writeCSV(df,"file:///c:/mdc-data/ball0901-csv")
-    val dfCsv = readCSV("file:///c:/mdc-data/ball0901-csv/part-*.csv")
-    println("CSV row count: " + dfCsv.count())*/
+     //prepare data for testing
+    val sql = getSql("/sql/PrepareData2.sql")
+    val outputDf = spark.sql(sql).cache()
+    println(outputDf.count())
+    outputDf.show()
+    writeCSV(outputDf,s"$folder/parquet",10000)
+    //update filename
+    import org.apache.hadoop.fs._
+    val sc = spark.sparkContext
+    val fs = FileSystem.get(sc.hadoopConfiguration)
+    val file = fs.globStatus(new Path(s"$folder/parquet/*/*.csv"))
+    file.foreach(f=> {
+      val path =  f.getPath.toString
+      val pattern = ".+newId=(\\d+).+(.+\\.csv)".r
+      val pattern(id,filename) = path
+      fs.rename(f.getPath, new Path(s"$folder/parquet-final/$id.csv"))
+    })
+
+
+    //code in glue
+/*    val df1 = readParquet("s3://ahuoo-bs/raw-data/").cache()
+    df1.createOrReplaceTempView("t_raw_data")
+    df1.show()
+    df1.printSchema()
+    val sql = getSql("/sql/PrepareData2.sql")
+    val outputDf = spark.sql(sql).cache()
+    outputDf.createOrReplaceTempView("o")
+    println(outputDf.count())
+    outputDf.show()
+    writeCSV(outputDf,"s3://ahuoo-bs/output-men-women/",3)*/
+
   }
 
 
@@ -53,13 +72,13 @@ object PrepareDataTest extends BaseApp{
     schema
   }
 
-  def readMysql(sql: String): DataFrame ={
-    log.info(sql)
+  def readMysql(tableName: String): DataFrame ={
+    log.info(tableName)
     val df = spark.read.format("jdbc").options(Map(
-      "url" -> "jdbc:mysql://10.5.135.15:3306/ball?user=root&password=sino2009&useUnicode=true&characterEncoding=utf-8",
-      "dbtable" -> s"($sql) t"
-      ,"lowerBound" -> "4633",
-      "upperBound" -> "198540654",
+      "url" -> config.getString("mysql_test_url"),
+      "dbtable" -> tableName
+      ,"lowerBound" -> "8566346",
+      "upperBound" -> "10310164",
       "numPartitions" -> "100",
       "partitionColumn" -> "id"
     )).load()
@@ -67,7 +86,7 @@ object PrepareDataTest extends BaseApp{
   }
 
   def writeMysql(df: DataFrame, table: String): Unit ={
-    val url = "jdbc:mysql://10.5.135.15:3306/test?user=root&password=sino2009&serverTimezone=GMT&useUnicode=true&characterEncoding=utf8"
+    val url = "jdbc:mysql://127.0.0.1:3306/ball?user=root&password=top960310A&serverTimezone=GMT&useUnicode=true&characterEncoding=utf8"
     df.repartition(100).write.format("jdbc").options(
       Map("url" -> url,
         "dbtable" -> table,
@@ -109,13 +128,21 @@ object PrepareDataTest extends BaseApp{
     df
   }
 
-  def writeCSV(df : DataFrame, filename: String): Unit ={
+  def writeCSV(df : DataFrame, filename: String, parNum: Int): Unit ={
     try{
-      df.repartition(1)
+/*      df.repartition(parNum)
         .write
         .format("com.databricks.spark.csv")
         .mode("overwrite")
         .option("header", "true")
+        .option("compression", "gzip")
+        .save(s"$filename")*/
+
+      df.write
+        .partitionBy("newId")
+        .format("com.databricks.spark.csv")
+        .mode("overwrite")
+       // .option("header", "true")
         .save(s"$filename")
     }catch{
       case e: Throwable => throw new Exception("Failed to generate csv file", e)
