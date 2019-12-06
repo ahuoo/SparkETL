@@ -25,7 +25,7 @@ object DataFrame2Mongo extends BaseApp{
     )
 
     val data = Seq(
-      Row("bob", Row("blue", 45)),
+      Row(null, null),
       Row("mary", Row("red", 64))
     )
     val schema = StructType(
@@ -46,7 +46,17 @@ object DataFrame2Mongo extends BaseApp{
 
     val df = spark.createDataFrame(spark.sparkContext.parallelize(data), schema)
     df.printSchema()
-    df.take(1).foreach(r=> doc = parseRow2Document(r, doc))
+
+
+    df.take(1).foreach(r=>{
+
+      val count = Array.range(0, r.length).foldLeft(0)((nullCount, cell) => {
+        nullCount + (if (r.get(cell) == null) 0 else 1)
+      })
+      doc = parseRow2Document(r, doc)
+    }
+
+    )
     var doc2 = Document(
       "stmt_id" -> "3"
     )
