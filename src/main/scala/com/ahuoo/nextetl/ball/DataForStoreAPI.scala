@@ -1,56 +1,68 @@
 package com.ahuoo.nextetl.ball
 
+import java.io.File
+
 import com.ahuoo.nextetl.BaseApp
 import org.apache.log4j.Logger
 import org.apache.spark.sql.types.{DataTypes, StringType, StructType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark.sql.functions._
+
 import scala.io.Source
 
-object PrepareDataTest extends BaseApp{
+object DataForStoreAPI extends BaseApp{
 
   import spark.implicits._
 
-  val folder = "file:///C:/w/software/eclipse-jee/workspace/SparkETL/src/test/resources"
+  val folder = "C:/w/software/eclipse-jee/workspace/SparkETL/src/test/resources"
+  val prefix = s"file:///$folder"
 
   def run(): Unit = {
     //prepare data for s3
-    val df = readMysql("ball.increase_temp").cache()
+    val df = readMysql("ball.increase").cache()
     df.printSchema()
     df.createOrReplaceTempView("t_raw_data")
-    writeParquet(df,s"$folder/other2/",5)
+    writeParquet(df,s"$folder/raw-data/",1)
 
 
-     //prepare data for testing
-    val sql = getSql("/sql/PrepareData2.sql")
+    //prepare data for testing
+    deleteDir(new File(s"$folder/csv"))
+    val sql = getSql("/sql/DataForStoreAPI.sql")
     val outputDf = spark.sql(sql).cache()
     println(outputDf.count())
     outputDf.show()
-    writeCSV(outputDf,s"$folder/parquet",10000)
+    writeCSV(outputDf,s"$prefix/csv",10000)
+
     //update filename
+    deleteDir(new File(s"$folder/csv-final"))
     import org.apache.hadoop.fs._
     val sc = spark.sparkContext
     val fs = FileSystem.get(sc.hadoopConfiguration)
-    val file = fs.globStatus(new Path(s"$folder/parquet/*/*.csv"))
+    val file = fs.globStatus(new Path(s"$prefix/csv/*/*.csv"))
     file.foreach(f=> {
       val path =  f.getPath.toString
       val pattern = ".+newId=(\\d+).+(.+\\.csv)".r
       val pattern(id,filename) = path
-      fs.rename(f.getPath, new Path(s"$folder/parquet-final/$id.csv"))
+      fs.rename(f.getPath, new Path(s"$prefix/csv-final/$id.csv"))
     })
+    println("job is done")
+  }
 
 
-    //code in glue
-/*    val df1 = readParquet("s3://ahuoo-bs/raw-data/").cache()
-    df1.createOrReplaceTempView("t_raw_data")
-    df1.show()
-    df1.printSchema()
-    val sql = getSql("/sql/PrepareData2.sql")
-    val outputDf = spark.sql(sql).cache()
-    outputDf.createOrReplaceTempView("o")
-    println(outputDf.count())
-    outputDf.show()
-    writeCSV(outputDf,"s3://ahuoo-bs/output-men-women/",3)*/
+  def deleteDir(path: File) {
+    if (!path.exists())
+      return
+    else if (path.isFile()) {
+      path.delete()
+      println(path + ":  文件被删除")
+      return
+    }
+    val file: Array[File] = path.listFiles()
+    for (d <- file) {
+      deleteDir(d)
+    }
+    path.delete()
+    println(path + ":  目录被删除")
 
   }
 
@@ -77,8 +89,8 @@ object PrepareDataTest extends BaseApp{
     val df = spark.read.format("jdbc").options(Map(
       "url" -> config.getString("mysql_test_url"),
       "dbtable" -> tableName
-      ,"lowerBound" -> "8566346",
-      "upperBound" -> "10310164",
+      ,"lowerBound" -> "17923611",
+      "upperBound" -> "20820934",
       "numPartitions" -> "100",
       "partitionColumn" -> "id"
     )).load()
@@ -142,7 +154,7 @@ object PrepareDataTest extends BaseApp{
         .partitionBy("newId")
         .format("com.databricks.spark.csv")
         .mode("overwrite")
-       // .option("header", "true")
+        .option("header", "true")
         .save(s"$filename")
     }catch{
       case e: Throwable => throw new Exception("Failed to generate csv file", e)

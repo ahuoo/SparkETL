@@ -1,10 +1,12 @@
 select
      newId,
-     gameId,updateDt
+     -- gameId,updateDt
+     gameId as id
      ,date,competitionName,team1,team2,currentScore1,currentScore2,offsetTime
      ,first1,second1,third1,forth1
      ,first2,second2,third2,forth2
-     ,betScore,lastScore,gender,overTime1,overTime2,lastThird1,lastForth1,lastThird2,lastForth2
+     ,betScore,lastScore
+     -- ,gender,overTime1,overTime2,lastThird1,lastForth1,lastThird2,lastForth2
 FROM
 (
 
@@ -24,6 +26,6 @@ FROM
     FROM t_raw_data
     WHERE betScore>0  
  )t
- where t.minOffsetTime>=0
+ -- where t.minOffsetTime>=0
   
  
