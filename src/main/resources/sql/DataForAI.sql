@@ -1,5 +1,5 @@
 select
-      gameId,updateDt
+      minUpdateDt ||'_'||right(md5(team1||team2),4) as gameId,updateDt
      ,date,competitionName,team1,team2,currentScore1,currentScore2,offsetTime
      ,first1,second1,third1,forth1
      ,first2,second2,third2,forth2
@@ -12,9 +12,9 @@ select
 FROM
 (
 
-  SELECT min(updateDt) over(partition by date,team1,team2,lastScore order by id asc) newId
-     ,min(offsetTime) over(partition by date,team1,team2,lastScore order by id asc) minOffsetTime
-     ,min(updateDt) over(partition by date,team1,team2,lastScore order by id asc) gameId
+  SELECT
+     min(updateDt) over(partition by date,team1,team2,lastScore ) minUpdateDt
+     ,min(offsetTime) over(partition by date,team1,team2,lastScore  order by id asc) minOffsetTime
 	 ,updateDt, date,competitionName,team1,team2,currentScore1,currentScore2,offsetTime
     ,first1,second1
     ,case when offsetTime<=600 then (currentScore1-first1-second1) else thrid1 end as third1

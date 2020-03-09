@@ -18,11 +18,15 @@ object DataForStoreAPI extends BaseApp{
   val prefix = s"file:///$folder"
 
   def run(): Unit = {
-    //prepare data for s3
-    val df = readMysql("ball.increase").cache()
+    //read data from mysql and save it to parquet
+/*    val df = readMysql("ball.increase_temp")
+      //.where("team1='东肯塔基' and date='20200117'").cache()
+    writeParquet(df,s"$folder/raw-data/",1)*/
+
+   //read data from parquet
+     val df = readParquet(s"$folder/raw-data/")//.where("team1='加利福尼亚 女子'")
     df.printSchema()
     df.createOrReplaceTempView("t_raw_data")
-    writeParquet(df,s"$folder/raw-data/",1)
 
 
     //prepare data for testing
@@ -40,8 +44,8 @@ object DataForStoreAPI extends BaseApp{
     val fs = FileSystem.get(sc.hadoopConfiguration)
     val file = fs.globStatus(new Path(s"$prefix/csv/*/*.csv"))
     file.foreach(f=> {
-      val path =  f.getPath.toString
-      val pattern = ".+newId=(\\d+).+(.+\\.csv)".r
+      val path =  f.getPath.toString //file:/C:/w/software/eclipse-jee/workspace/SparkETL/src/test/resources/csv/newId=20200111114553_1195/part-00026-b5849f1e-a2ba-488c-8e70-e8d282297e1a.c000.csv
+      val pattern = ".+newId=(.+)/(.+\\.csv)".r  //newId=20200103012748_8085
       val pattern(id,filename) = path
       fs.rename(f.getPath, new Path(s"$prefix/csv-final/$id.csv"))
     })
