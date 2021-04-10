@@ -6,6 +6,7 @@ select
      ,first1,second1,third1,forth1
      ,first2,second2,third2,forth2
      ,betScore,lastScore
+     ,overTime1,overTime2
      -- ,gender,overTime1,overTime2,lastThird1,lastForth1,lastThird2,lastForth2
 FROM
 (

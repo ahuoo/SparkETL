@@ -19,14 +19,21 @@ object DataForStoreAPI extends BaseApp{
 
   def run(): Unit = {
     //read data from mysql and save it to parquet
-/*    val df = readMysql("ball.increase_temp")
-      //.where("team1='东肯塔基' and date='20200117'").cache()
-    writeParquet(df,s"$folder/raw-data/",1)*/
+    val df = readMysql("ball.increase_temp")  //.where("team1='东肯塔基' and date='20200117'").cache()
+    //prepare data for s3
+    writeParquet(df,s"$folder/raw-data/",1)
+    println("writeParquet is done")
 
    //read data from parquet
-     val df = readParquet(s"$folder/raw-data/")//.where("team1='加利福尼亚 女子'")
-    df.printSchema()
+/*    val df = readParquet(s"$folder/raw-data/") //.where("team1='加利福尼亚 女子'")
+    df.printSchema()*/
+
     df.createOrReplaceTempView("t_raw_data")
+
+    //for ai
+    val sql2 = getSql("/sql/DataForAI.sql")
+    val outputDf2 = spark.sql(sql2).cache()
+    writeCSV(outputDf2,s"$prefix/output-men-women",1)
 
 
     //prepare data for testing
@@ -35,7 +42,7 @@ object DataForStoreAPI extends BaseApp{
     val outputDf = spark.sql(sql).cache()
     println(outputDf.count())
     outputDf.show()
-    writeCSV(outputDf,s"$prefix/csv",10000)
+    writeCSVWithPartition(outputDf,s"$prefix/csv",10000)
 
     //update filename
     deleteDir(new File(s"$folder/csv-final"))
@@ -93,8 +100,8 @@ object DataForStoreAPI extends BaseApp{
     val df = spark.read.format("jdbc").options(Map(
       "url" -> config.getString("mysql_test_url"),
       "dbtable" -> tableName
-      ,"lowerBound" -> "17923611",
-      "upperBound" -> "20820934",
+      ,"lowerBound" -> "1",
+      "upperBound" -> "1425893",
       "numPartitions" -> "100",
       "partitionColumn" -> "id"
     )).load()
@@ -144,7 +151,7 @@ object DataForStoreAPI extends BaseApp{
     df
   }
 
-  def writeCSV(df : DataFrame, filename: String, parNum: Int): Unit ={
+  def writeCSVWithPartition(df : DataFrame, filename: String, parNum: Int): Unit ={
     try{
 /*      df.repartition(parNum)
         .write
@@ -159,6 +166,21 @@ object DataForStoreAPI extends BaseApp{
         .format("com.databricks.spark.csv")
         .mode("overwrite")
         .option("header", "true")
+        .save(s"$filename")
+    }catch{
+      case e: Throwable => throw new Exception("Failed to generate csv file", e)
+    }
+  }
+
+
+  def writeCSV(df : DataFrame, filename: String, parNum: Int): Unit ={
+    try{
+      df.repartition(parNum,$"date")
+        .write
+        .format("com.databricks.spark.csv")
+        .mode("overwrite")
+        .option("header", "true")
+        .option("compression", "gzip")
         .save(s"$filename")
     }catch{
       case e: Throwable => throw new Exception("Failed to generate csv file", e)
