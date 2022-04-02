@@ -3,12 +3,8 @@ package com.ahuoo.nextetl.ball
 import java.io.File
 
 import com.ahuoo.nextetl.BaseApp
-import org.apache.log4j.Logger
-import org.apache.spark.sql.types.{DataTypes, StringType, StructType}
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
-import org.apache.spark.sql.functions._
-
-import scala.io.Source
+import org.apache.spark.sql.types.{DataTypes, StructType}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
 object DataForStoreAPI extends BaseApp{
 
@@ -20,17 +16,15 @@ object DataForStoreAPI extends BaseApp{
   def run(): Unit = {
     //read data from mysql and save it to parquet
     val df = readMysql("ball.increase_temp")  //.where("team1='东肯塔基' and date='20200117'").cache()
-    //prepare data for s3
     writeParquet(df,s"$folder/raw-data/",1)
-    println("writeParquet is done")
+    println("prepare data for s3 is done")
 
-   //read data from parquet
-/*    val df = readParquet(s"$folder/raw-data/") //.where("team1='加利福尼亚 女子'")
-    df.printSchema()*/
-
-    df.createOrReplaceTempView("t_raw_data")
+    //read data from parquet
+    //val df = readParquet(s"$folder/raw-data/") //.where("team1='加利福尼亚 女子'")
+    //df.printSchema()
 
     //for ai
+    df.createOrReplaceTempView("t_raw_data")
     val sql2 = getSql("/sql/DataForAI.sql")
     val outputDf2 = spark.sql(sql2).cache()
     writeCSV(outputDf2,s"$prefix/output-men-women",1)
@@ -43,6 +37,7 @@ object DataForStoreAPI extends BaseApp{
     println(outputDf.count())
     outputDf.show()
     writeCSVWithPartition(outputDf,s"$prefix/csv",10000)
+
 
     //update filename
     deleteDir(new File(s"$folder/csv-final"))
@@ -201,13 +196,6 @@ object DataForStoreAPI extends BaseApp{
   }
 
 
-
-
-  def getSql(path : String) = {
-    val stream = getClass.getResourceAsStream(path)
-    val sql = try Source.fromInputStream(stream).mkString finally stream.close()
-    sql
-  }
 
 }
 

@@ -1,8 +1,11 @@
 package com.ahuoo.nextetl
 
+import com.ahuoo.nextetl.ball.DataForStoreAPI.getClass
 import com.ahuoo.nextetl.utils.ConfigUtil
 import org.apache.log4j.Logger
 import org.apache.spark.sql.SparkSession
+
+import scala.io.Source
 
 trait BaseApp {
   @transient lazy val log = Logger.getLogger(this.getClass)
@@ -22,6 +25,12 @@ trait BaseApp {
     val debugArgs = Array("dev","###project.env=dev###project.retryNum=0")
     config = new ConfigUtil(debugArgs)
     log.info("Args: " + debugArgs.mkString(" "))
+  }
+
+  def getSql(path : String) = {
+    val stream = getClass.getResourceAsStream(path)
+    val sql = try Source.fromInputStream(stream).mkString finally stream.close()
+    sql
   }
 
   def main(args: Array[String]): Unit = {
